@@ -1,0 +1,1 @@
+Two contracts do the work. The vault sits on Base Sepolia. It holds the funds, and it remembers the heir, the days, and your last ping. The watcher lives on the Reactive testnet. On every tick it asks one question. Has the owner been quiet long enough? The watcher cannot move money by itself. Only the vault can, and only when the dates prove the silence.

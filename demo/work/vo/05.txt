@@ -1,0 +1,1 @@
+We proved it live. In the test, the wallet went quiet for a hundred and twenty five seconds. The watcher saw the silence and asked for the release. Nobody pressed anything.

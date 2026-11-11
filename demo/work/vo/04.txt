@@ -1,0 +1,1 @@
+This is the app. You set the heir, the number of days, and the deposit. One button says I am alive. The status shows the balance, the last ping, and how long you have been quiet.

@@ -1,0 +1,8 @@
+file '/home/hatch/workspace/hackathons/reactive/dead-mans-switch/demo/work/scenes/s01.mp4'
+file '/home/hatch/workspace/hackathons/reactive/dead-mans-switch/demo/work/scenes/s02.mp4'
+file '/home/hatch/workspace/hackathons/reactive/dead-mans-switch/demo/work/scenes/s03.mp4'
+file '/home/hatch/workspace/hackathons/reactive/dead-mans-switch/demo/work/scenes/s04.mp4'
+file '/home/hatch/workspace/hackathons/reactive/dead-mans-switch/demo/work/scenes/s05.mp4'
+file '/home/hatch/workspace/hackathons/reactive/dead-mans-switch/demo/work/scenes/s06.mp4'
+file '/home/hatch/workspace/hackathons/reactive/dead-mans-switch/demo/work/scenes/s07.mp4'
+file '/home/hatch/workspace/hackathons/reactive/dead-mans-switch/demo/work/scenes/s08.mp4'

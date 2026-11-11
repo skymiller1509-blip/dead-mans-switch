@@ -1,0 +1,1 @@
+You can check it yourself. The tick and the payment are both on the chain, with their transaction hashes.

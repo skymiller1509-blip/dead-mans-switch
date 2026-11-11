@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { width:1920px; height:1080px; background:#0d0b1e; color:#fff; font-family:system-ui, sans-serif; overflow:hidden; }
+  .wrap { width:1920px; height:1080px; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:0 100px; }
+  .kicker { color:#8b7cff; font-size:34px; font-weight:700; letter-spacing:4px; text-transform:uppercase; margin-bottom:56px; }
+  .row { display:flex; align-items:stretch; justify-content:center; width:100%; }
+  .box { background:#1a1733; border:2px solid #3a3468; border-radius:20px; padding:36px 30px; width:400px; text-align:center; }
+  .box.hot { border-color:#8b7cff; background:#241f4d; }
+  .box h2 { font-size:38px; margin-bottom:12px; }
+  .box p { font-size:26px; color:#c9c6e0; line-height:1.45; }
+  .box .tag { font-size:22px; color:#8b7cff; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-bottom:14px; }
+  .arrow { font-size:64px; color:#8b7cff; align-self:center; margin:0 18px; font-weight:800; }
+  .note { margin-top:56px; font-size:32px; color:#c9c6e0; text-align:center; }
+  .note b { color:#fff; }
+</style></head><body>
+<div class="wrap">
+  <div class="kicker">How it works</div>
+  <div class="row">
+    <div class="box"><div class="tag">Vault</div><h2>Base Sepolia</h2><p>Holds the funds. Records the heir, the days, and the last time you pinged.</p></div>
+    <div class="arrow">&rarr;</div>
+    <div class="box hot"><div class="tag">Watcher</div><h2>Lasna testnet</h2><p>Checks on a schedule. On every tick it asks: has the owner been quiet long enough?</p></div>
+    <div class="arrow">&rarr;</div>
+    <div class="box"><div class="tag">Release</div><h2>Heir gets paid</h2><p>The vault checks the dates itself, then sends everything to the heir.</p></div>
+  </div>
+  <div class="note">The watcher cannot move money by itself. Only the vault can, and only when the dates prove the silence.</div>
+</div>
+</body></html>

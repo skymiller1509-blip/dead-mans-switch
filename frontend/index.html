@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dead Man's Switch — Reactive</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+  h1 { font-size: 1.4rem; }
+  label { display: block; margin: 0.75rem 0 0.25rem; font-weight: 600; }
+  input { width: 100%; padding: 0.5rem; font-size: 1rem; box-sizing: border-box; }
+  button { margin-top: 1rem; padding: 0.7rem 1.2rem; font-size: 1rem; cursor: pointer; }
+  button.primary { background: #111; color: #fff; border: none; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #status { margin-top: 1.5rem; padding: 1rem; background: #f4f4f4; border-radius: 8px; white-space: pre-wrap; }
+  .hint { color: #555; font-size: 0.9rem; }
+  .warn { color: #a00; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>Dead Man's Switch</h1>
+<p>If you go quiet for <strong>N days</strong>, your funds go to your heir — automatically, on-chain.</p>
+<p class="hint">A Reactive contract on Lasna testnet watches your vault on Base Sepolia.
+Every tick it checks how long you have been silent. If the silence reaches N days,
+it tells the vault to send everything to your heir. The vault checks the dates itself
+before moving anything, so a mistaken trigger can never pay out early.</p>
+
+<h2>1. Connect</h2>
+<button id="connectBtn">Connect wallet</button>
+<p id="account" class="hint">Not connected.</p>
+
+<h2>2. Set up your switch</h2>
+<p class="hint">Fill these in, then press "Create vault". This deploys your vault on
+<strong>Base Sepolia</strong> (chain 84532). The Reactive contract on Lasna is already
+deployed by the project and pointed at your vault afterwards.</p>
+<label for="heir">Heir address (who gets the funds)</label>
+<input id="heir" type="text" placeholder="0x...">
+<label for="days">Inactivity period — days of silence before release</label>
+<input id="days" type="number" min="1" value="30">
+<label for="amount">Deposit amount (ETH on Base Sepolia)</label>
+<input id="amount" type="number" min="0" step="0.001" value="0.01">
+<p class="hint">Keep a little extra ETH in the vault: the callback that releases the
+funds is billed to the vault in ETH, so the vault needs a small reserve on top
+of the amount you want your heir to receive.</p>
+<button id="createBtn" class="primary" disabled>Create vault + deposit</button>
+
+<h2>3. I'm alive</h2>
+<p class="hint">Press this whenever you want to reset the clock. Depositing also counts.</p>
+<button id="pingBtn" disabled>Ping (I'm alive)</button>
+
+<h2>4. Status</h2>
+<button id="refreshBtn" disabled>Refresh status</button>
+<div id="status">Connect your wallet to see the status.</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script>
+// ---- Fill these in after the testnet deploy (see script/Deploy*.s.sol) ----
+const VAULT_ADDRESS = "0x0804f3b9ff9c0e676d784ce69a6939ad37d434e8"; // Base Sepolia (deployed 2026-11-11)
+const SWITCH_ADDRESS = "0x0804f3B9FF9C0E676d784ce69a6939ad37d434E8"; // Lasna (deployed 2026-11-11)
+const BASE_SEPOLIA_CHAIN_ID = 84532n;
+// Base Sepolia callback proxy, from dev.reactive.network/origins-and-destinations
+const CALLBACK_PROXY = "0x476F44b11F5C942c58f4c8E3d0300E5710743585";
+
+const VAULT_ABI = [
+  "function owner() view returns (address)",
+  "function heir() view returns (address)",
+  "function inactivityPeriod() view returns (uint256)",
+  "function lastActive() view returns (uint256)",
+  "function released() view returns (bool)",
+  "function isInactive() view returns (bool)",
+  "function deposit() payable",
+  "function ping()",
+  "constructor(address,address,address,address,uint256) payable"
+];
+const VAULT_BYTECODE = ""; // paste the compiled bytecode here after `forge build`
+
+let provider, signer, vault;
+
+const $ = (id) => document.getElementById(id);
+const fmtDate = (ts) => new Date(Number(ts) * 1000).toLocaleString();
+
+$("connectBtn").onclick = async () => {
+  if (!window.ethereum) { alert("No wallet found. Install MetaMask or similar."); return; }
+  provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send("eth_requestAccounts", []);
+  signer = await provider.getSigner();
+  const addr = await signer.getAddress();
+  $("account").textContent = "Connected: " + addr;
+  $("createBtn").disabled = false;
+  $("pingBtn").disabled = false;
+  $("refreshBtn").disabled = false;
+  if (VAULT_ADDRESS !== "0x0000000000000000000000000000000000000000") {
+    vault = new ethers.Contract(VAULT_ADDRESS, VAULT_ABI, signer);
+    refreshStatus();
+  }
+};
+
+$("createBtn").onclick = async () => {
+  const heir = $("heir").value.trim();
+  const days = Number($("days").value);
+  const amount = $("amount").value;
+  if (!ethers.isAddress(heir)) { alert("Heir address looks wrong."); return; }
+  if (!(days >= 1)) { alert("Days must be at least 1."); return; }
+  const net = await provider.getNetwork();
+  if (net.chainId !== BASE_SEPOLIA_CHAIN_ID) {
+    alert("Switch your wallet to Base Sepolia (chain 84532) first.");
+    return;
+  }
+  const owner = await signer.getAddress();
+  const factory = new ethers.ContractFactory(VAULT_ABI, VAULT_BYTECODE, signer);
+  const v = await factory.deploy(CALLBACK_PROXY, SWITCH_ADDRESS, owner, heir, days, {
+    value: ethers.parseEther(amount),
+  });
+  $("status").textContent = "Deploying vault… tx: " + v.deploymentTransaction().hash;
+  await v.waitForDeployment();
+  const addr = await v.getAddress();
+  $("status").textContent = "Vault deployed at " + addr +
+    "\n\nNow point the Lasna switch at it (see script/SetVault.s.sol), then paste the address into VAULT_ADDRESS above.";
+  vault = v;
+  refreshStatus();
+};
+
+$("pingBtn").onclick = async () => {
+  if (!vault) { alert("No vault yet — create one first."); return; }
+  const tx = await vault.ping();
+  $("status").textContent = "Ping sent… tx: " + tx.hash;
+  await tx.wait();
+  refreshStatus();
+};
+
+async function refreshStatus() {
+  if (!vault) { $("status").textContent = "No vault address set yet."; return; }
+  const [owner, heir, period, lastActive, released, inactive] = await Promise.all([
+    vault.owner(), vault.heir(), vault.inactivityPeriod(),
+    vault.lastActive(), vault.released(), vault.isInactive(),
+  ]);
+  const bal = await provider.getBalance(await vault.getAddress());
+  const now = Math.floor(Date.now() / 1000);
+  const silentDays = ((now - Number(lastActive)) / 86400).toFixed(2);
+  const periodDays = (Number(period) / 86400).toFixed(1);
+  $("status").textContent =
+    "Owner: " + owner +
+    "\nHeir: " + heir +
+    "\nBalance: " + ethers.formatEther(bal) + " ETH" +
+    "\nInactivity period: " + periodDays + " days" +
+    "\nLast activity: " + fmtDate(lastActive) + " (" + silentDays + " days ago)" +
+    "\nReleased: " + (released ? "YES — funds sent to heir" : "no") +
+    "\nInactive now: " + (inactive ? "YES" : "no");
+}
+$("refreshBtn").onclick = refreshStatus;
+</script>
+</body>
+</html>
